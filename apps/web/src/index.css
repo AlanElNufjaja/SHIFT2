@@ -1,0 +1,77 @@
+@import 'leaflet/dist/leaflet.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #e8dfce;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420' viewBox='0 0 420 420'%3E%3Cg fill='none' stroke='%238c775b' stroke-opacity='0.095' stroke-width='1.1'%3E%3Cpath d='M-20 80 Q 100 35 210 85 T 440 75'/%3E%3Cpath d='M-20 155 Q 115 110 225 160 T 440 150'/%3E%3Cpath d='M-20 230 Q 95 190 215 245 T 440 230'/%3E%3Cpath d='M-20 315 Q 130 275 235 320 T 440 310'/%3E%3Cpath d='M-20 390 Q 110 350 220 395 T 440 385'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 420px 420px;
+    color: #2a2118;
+    font-family: Inter, system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+  }
+}
+
+/* Custom accessible range sliders */
+input[type='range'].fs-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 999px;
+  background: #d8cab3;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type='range'].fs-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 21px;
+  height: 21px;
+  border-radius: 9999px;
+  background: #234e36;
+  border: 2.5px solid #faf6ee;
+  box-shadow: 0 2px 5px rgba(42, 33, 24, 0.3);
+  transition: transform 0.15s ease;
+}
+
+input[type='range'].fs-range::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+input[type='range'].fs-range::-moz-range-thumb {
+  width: 21px;
+  height: 21px;
+  border-radius: 9999px;
+  background: #234e36;
+  border: 2.5px solid #faf6ee;
+  box-shadow: 0 2px 5px rgba(42, 33, 24, 0.3);
+}
+
+.leaflet-container {
+  font-family: Inter, system-ui, sans-serif;
+  z-index: 1;
+}
+
+.leaflet-layer.fs-hillshade-layer {
+  mix-blend-mode: multiply;
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    background-image: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-break-avoid {
+    break-inside: avoid;
+  }
+}

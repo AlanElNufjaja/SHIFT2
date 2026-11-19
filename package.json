@@ -1,0 +1,29 @@
+{
+  "name": "fieldshift",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Field Shift — Adapting Farms with NASA Data. Decision-support for climate-resilient crop rotation.",
+  "workspaces": [
+    "packages/core",
+    "apps/server",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c green,cyan \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "npm run dev -w @fieldshift/server",
+    "dev:web": "npm run dev -w @fieldshift/web",
+    "build": "npm run build -w @fieldshift/core && npm run build -w @fieldshift/server && npm run build -w @fieldshift/web",
+    "start": "npm run start -w @fieldshift/server",
+    "test": "npm run test -w @fieldshift/core && npm run test -w @fieldshift/server",
+    "typecheck": "npm run typecheck -w @fieldshift/core && npm run typecheck -w @fieldshift/server && npm run typecheck -w @fieldshift/web",
+    "verify": "npm run typecheck && npm test && npm run build",
+    "smoke": "npm run smoke -w @fieldshift/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

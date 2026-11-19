@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: field-shift
+    runtime: node
+    plan: free
+    autoDeploy: true
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      # Variables opcionales (todas las fuentes NASA/USDA/USGS/ESA principales funcionan sin API key).
+      # Si deseas activarlas, agrégalas manualmente en Render -> Environment:
+      # - NASS_API_KEY
+      # - OPENET_API_KEY
