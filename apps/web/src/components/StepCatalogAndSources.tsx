@@ -9,18 +9,30 @@ import {
 } from 'lucide-react';
 import {
   CATEGORY_LABELS,
-  GLOSSARY,
-  MONTH_NAMES_ES,
+  MONTH_NAMES,
   SOURCES,
+  getCategoryLabel,
+  getCropName,
+  getCropNotes,
+  getCropPriceSource,
+  getFamilyLabel,
+  getGlossary,
+  getSourceMeta,
 } from '@fieldshift/core';
 import type {
-  ConnectorStatus,
   Crop,
   CropCategory,
   CropSuitabilityRow,
+  Locale,
   SiteProfile,
   SourceAgency,
 } from '@fieldshift/core';
+import { useLocale } from '../i18n/LocaleContext';
+import {
+  CONNECTOR_STATUS_COPY,
+  localizeSourceSummary,
+  translateNassStatus,
+} from '../i18n/translations';
 import { DetailsToggle } from './ui/DetailsToggle';
 
 export type MarketOverrides = Record<
@@ -38,17 +50,12 @@ interface Props {
   onChangeOverrides: (next: MarketOverrides) => void;
 }
 
-const STATUS_BADGE: Record<ConnectorStatus, { label: string; cls: string }> = {
-  live: { label: 'En vivo', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
-  cached: { label: 'Guardado', cls: 'bg-teal-50 text-teal-800 border-teal-200' },
-  fallback: { label: 'Estimado', cls: 'bg-amber-50 text-amber-800 border-amber-200' },
-  unavailable: { label: 'Sin respuesta', cls: 'bg-rose-50 text-rose-800 border-rose-200' },
-  'not-applicable': { label: 'Otra región', cls: 'bg-stone-100 text-stone-600 border-stone-200' },
-  'key-required': { label: 'Opcional', cls: 'bg-sky-50 text-sky-800 border-sky-200' },
-  reference: { label: 'Referencia', cls: 'bg-stone-50 text-stone-700 border-stone-200' },
-};
-
-function suitabilityPlainLabel(score: number): string {
+function suitabilityPlainLabel(score: number, locale: Locale): string {
+  if (locale === 'en') {
+    if (score >= 70) return `Great fit (${score})`;
+    if (score >= 45) return `Fair fit (${score})`;
+    return `Tough fit (${score})`;
+  }
   if (score >= 70) return `Se da muy bien (${score})`;
   if (score >= 45) return `Se da regular (${score})`;
   return `Difícil aquí (${score})`;
@@ -109,6 +116,11 @@ export function StepCatalogAndSources({
   nassStatus,
   onChangeOverrides,
 }: Props) {
+  const { locale } = useLocale();
+  const isEn = locale === 'en';
+  const monthNames = MONTH_NAMES[locale];
+  const glossary = getGlossary(locale);
+
   const [tab, setTab] = useState<'catalog' | 'sources'>('catalog');
   const [cropQuery, setCropQuery] = useState('');
   const [catFilter, setCatFilter] = useState<CropCategory | 'all'>('all');
@@ -124,6 +136,7 @@ export function StepCatalogAndSources({
       c.name.toLowerCase().includes(q) ||
       c.nameEn.toLowerCase().includes(q) ||
       c.family.toLowerCase().includes(q) ||
+      getFamilyLabel(c.family, locale).toLowerCase().includes(q) ||
       c.scientific.toLowerCase().includes(q)
     );
   });
@@ -139,14 +152,14 @@ export function StepCatalogAndSources({
       [cropId]: {
         ...overrides[cropId],
         [field]: val,
-        priceSource: 'Precio ajustado por ti',
+        priceSource: isEn ? 'Adjusted by you' : 'Precio ajustado por ti',
       },
     });
   };
 
   const hasOverrides = Object.keys(overrides).length > 0;
   const agencies = Array.from(new Set(Object.values(SOURCES).map((s) => s.agency)));
-  const cleanNassStatus = nassStatus ? nassStatus.replace(/\.+$/, '') : '';
+  const cleanNassStatus = translateNassStatus(nassStatus, locale);
 
   const filteredReports = site.sources.filter((rep) => {
     if (agencyFilter === 'all') return true;
@@ -159,10 +172,14 @@ export function StepCatalogAndSources({
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#C8B89E] bg-[#FAF6EE] p-5 shadow-card">
         <div>
           <span className="rounded-full border border-[#234E36]/25 bg-[#E7EFE9] px-3 py-1 text-xs font-bold text-[#1B3B2B]">
-            Paso 5 de 5 · Cultivos, precios y origen de la información
+            {isEn
+              ? 'Step 5 of 5 · Crops, prices & data sources'
+              : 'Paso 5 de 5 · Cultivos, precios y origen de la información'}
           </span>
           <h1 className="mt-2 font-display text-2xl font-extrabold text-[#2A2118]">
-            Ajusta precios de tu región o revisa de dónde salen los datos
+            {isEn
+              ? 'Edit local prices or check where numbers come from'
+              : 'Ajusta precios de tu región o revisa de dónde salen los datos'}
           </h1>
         </div>
 
@@ -175,7 +192,7 @@ export function StepCatalogAndSources({
             }`}
           >
             <Sprout className="h-4 w-4" />
-            Cultivos y precios ({catalog.length})
+            {isEn ? `Crops & prices (${catalog.length})` : `Cultivos y precios (${catalog.length})`}
           </button>
           <button
             type="button"
@@ -185,7 +202,7 @@ export function StepCatalogAndSources({
             }`}
           >
             <Database className="h-4 w-4" />
-            De dónde salen los datos
+            {isEn ? 'Where data comes from' : 'De dónde salen los datos'}
           </button>
         </div>
       </div>
@@ -199,7 +216,11 @@ export function StepCatalogAndSources({
                 type="text"
                 value={cropQuery}
                 onChange={(e) => setCropQuery(e.target.value)}
-                placeholder="Buscar cultivo por nombre (ej. maíz, sorgo, frijol)…"
+                placeholder={
+                  isEn
+                    ? 'Search crop by name (e.g. corn, sorghum, alfalfa)…'
+                    : 'Buscar cultivo por nombre (ej. maíz, sorgo, frijol)…'
+                }
                 className="w-full rounded-xl border border-stone-300 py-2 pl-9 pr-3 text-xs focus:border-emerald-700 focus:outline-none"
               />
             </div>
@@ -209,10 +230,10 @@ export function StepCatalogAndSources({
               onChange={(e) => setCatFilter(e.target.value as CropCategory | 'all')}
               className="rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs font-semibold text-stone-800"
             >
-              <option value="all">Todos los tipos</option>
+              <option value="all">{isEn ? 'All crop types' : 'Todos los tipos'}</option>
               {(Object.keys(CATEGORY_LABELS) as CropCategory[]).map((cat) => (
                 <option key={cat} value={cat}>
-                  {CATEGORY_LABELS[cat]}
+                  {getCategoryLabel(cat, locale)}
                 </option>
               ))}
             </select>
@@ -224,24 +245,28 @@ export function StepCatalogAndSources({
                 className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
-                Regresar a precios originales
+                {isEn ? 'Reset to starting prices' : 'Regresar a precios originales'}
               </button>
             )}
           </div>
 
           {cleanNassStatus && (
             <p className="text-xs text-stone-600">
-              Precios de referencia: {cleanNassStatus}. Si cambias el precio o rendimiento de un cultivo, las opciones del Paso 4 se actualizan al instante.
+              {isEn
+                ? `Starting prices: ${cleanNassStatus}. If you change a price or yield below, your Step 4 options update right away.`
+                : `Precios de referencia: ${cleanNassStatus}. Si cambias el precio o rendimiento de un cultivo, las opciones del Paso 4 se actualizan al instante.`}
             </p>
           )}
 
           {filteredCrops.length === 0 ? (
             <div className="rounded-2xl border border-[#C8B89E] bg-[#FAF6EE] p-8 text-center shadow-card">
               <p className="text-sm font-bold text-[#2A2118]">
-                No encontramos ningún cultivo con ese nombre o filtro.
+                {isEn ? 'No crops matched your search or filter.' : 'No encontramos ningún cultivo con ese nombre o filtro.'}
               </p>
               <p className="mt-1 text-xs text-[#6B5A46]">
-                Prueba borrando la búsqueda o cambiando la categoría.
+                {isEn
+                  ? 'Try clearing your search box or switching crop type.'
+                  : 'Prueba borrando la búsqueda o cambiando la categoría.'}
               </p>
               <button
                 type="button"
@@ -251,7 +276,7 @@ export function StepCatalogAndSources({
                 }}
                 className="mt-4 rounded-xl bg-[#234E36] px-4 py-2 text-xs font-bold text-[#FAF6EE] hover:bg-[#1B3B2B]"
               >
-                Mostrar todos los cultivos
+                {isEn ? 'Show all crops' : 'Mostrar todos los cultivos'}
               </button>
             </div>
           ) : (
@@ -272,8 +297,12 @@ export function StepCatalogAndSources({
                       <div className="flex min-w-0 items-center gap-2">
                         <span className="shrink-0 text-xl">{c.icon}</span>
                         <div className="min-w-0">
-                          <h3 className="truncate text-sm font-extrabold text-stone-900">{c.name}</h3>
-                          <p className="truncate text-[11px] text-stone-500">Familia: {c.family}</p>
+                          <h3 className="truncate text-sm font-extrabold text-stone-900">
+                            {getCropName(c, locale)}
+                          </h3>
+                          <p className="truncate text-[11px] text-stone-500">
+                            {isEn ? 'Group:' : 'Familia:'} {getFamilyLabel(c.family, locale)}
+                          </p>
                         </div>
                       </div>
 
@@ -288,10 +317,12 @@ export function StepCatalogAndSources({
                                 : 'border-rose-200 bg-rose-50 text-rose-800'
                             }`}
                           >
-                            {suitabilityPlainLabel(row.suitability)}
+                            {suitabilityPlainLabel(row.suitability, locale)}
                           </span>
                           <p className="mt-0.5 text-[10px] text-stone-500">
-                            Mejor mes para sembrar: {MONTH_NAMES_ES[row.placement.startMonth]} ({row.placement.months} m)
+                            {isEn ? 'Best planting month:' : 'Mejor mes para sembrar:'}{' '}
+                            {monthNames[row.placement.startMonth]} ({row.placement.months}{' '}
+                            {isEn ? 'mo' : 'm'})
                           </p>
                         </div>
                       )}
@@ -300,56 +331,67 @@ export function StepCatalogAndSources({
                     {/* Agronomic traits */}
                     <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-stone-50 p-2.5 text-[11px]">
                       <div>
-                        <span className="text-stone-500">Agua que pide</span>
+                        <span className="text-stone-500">{isEn ? 'Water needed' : 'Agua que pide'}</span>
                         <p className="font-mono font-bold text-stone-800">
                           {c.water.seasonalMm[0]}–{c.water.seasonalMm[1]} mm
                         </p>
                       </div>
                       <div>
-                        <span className="text-stone-500">Abono (nitrógeno)</span>
+                        <span className="text-stone-500">{isEn ? 'Nitrogen fertilizer' : 'Abono (nitrógeno)'}</span>
                         <p className="font-mono font-bold text-stone-800">
                           {c.nitrogen.fixer
-                            ? `Aporta +${c.nitrogen.fixationKgHa} kg`
+                            ? isEn
+                              ? `Adds +${c.nitrogen.fixationKgHa} kg`
+                              : `Aporta +${c.nitrogen.fixationKgHa} kg`
+                            : isEn
+                            ? `Uses ${c.nitrogen.demandKgHa} kg`
                             : `Ocupa ${c.nitrogen.demandKgHa} kg`}
                         </p>
                       </div>
                       <div>
-                        <span className="text-stone-500">Rastrojo / raíz</span>
+                        <span className="text-stone-500">{isEn ? 'Residue / root depth' : 'Rastrojo / raíz'}</span>
                         <p className="font-mono font-bold text-stone-800">
                           {c.soil.residueTHa} t/ha · {c.soil.rootDepthM} m
                         </p>
                       </div>
                     </div>
 
-                    {/* Inline local market editor — responsive without horizontal clipping */}
+                    {/* Inline local market editor */}
                     <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                       <SafeNumberField
-                        label={`Precio (USD/${c.market.unit})`}
+                        label={isEn ? `Price (USD/${c.market.unit})` : `Precio (USD/${c.market.unit})`}
                         value={c.market.price}
                         step={5}
                         onCommit={(v) => updateCropMarket(c.id, 'price', v)}
                       />
                       <SafeNumberField
-                        label={`Cosecha (${c.market.unit}/ha)`}
+                        label={isEn ? `Yield (${c.market.unit}/ha)` : `Cosecha (${c.market.unit}/ha)`}
                         value={c.market.potentialYield}
                         step={0.2}
                         onCommit={(v) => updateCropMarket(c.id, 'potentialYield', v)}
                       />
                       <SafeNumberField
-                        label="Gasto trabajo (USD/ha)"
+                        label={isEn ? 'Field work cost (USD/ha)' : 'Gasto trabajo (USD/ha)'}
                         value={c.market.costPerHa}
                         step={25}
                         onCommit={(v) => updateCropMarket(c.id, 'costPerHa', v)}
                       />
                     </div>
 
-                    <p className="mt-2.5 text-[11px] leading-relaxed text-stone-600">{c.notes}</p>
+                    <p className="mt-2.5 text-[11px] leading-relaxed text-stone-600">
+                      {getCropNotes(c, locale)}
+                    </p>
                     <p className="mt-1 text-[10px] text-stone-400">
-                      Referencia: {isEdited ? `Editado por ti (original: $${base.market.price})` : c.market.priceSource}
+                      {isEn ? 'Reference:' : 'Referencia:'}{' '}
+                      {isEdited
+                        ? isEn
+                          ? `Edited by you (starting price: $${base.market.price})`
+                          : `Editado por ti (original: $${base.market.price})`
+                        : getCropPriceSource(c, locale)}
                     </p>
                     {row && row.limiting.length > 0 && (
                       <p className="mt-1.5 rounded-lg bg-amber-50 px-2.5 py-1 text-[11px] text-amber-900">
-                        Cuidado aquí: {row.limiting.join(' · ')}
+                        {isEn ? 'Watch out here:' : 'Cuidado aquí:'} {row.limiting.join(' · ')}
                       </p>
                     )}
                   </div>
@@ -366,41 +408,65 @@ export function StepCatalogAndSources({
           <div className="rounded-2xl border border-[#C8B89E] bg-[#FAF6EE] p-5 shadow-card sm:p-6">
             <h2 className="flex items-center gap-2 text-base font-bold text-stone-900">
               <BookOpen className="h-4 w-4 text-emerald-700" />
-              Cómo juntamos esta información para tu parcela
+              {isEn ? 'How we gather information for your parcel' : 'Cómo juntamos esta información para tu parcela'}
             </h2>
-            <div className="mt-3 grid gap-4 text-xs leading-relaxed text-stone-700 md:grid-cols-3">
-              <div className="rounded-xl bg-stone-50 p-4">
-                <p className="font-bold text-stone-900">1. Clima y lluvia de tu zona</p>
-                <p className="mt-1">
-                  Consultamos registros reales de los últimos años de satélites y estaciones (NASA POWER y ERA5) para
-                  saber cuánto llueve, cuándo hace helada y cuánto calor quema las flores.
-                </p>
+            {isEn ? (
+              <div className="mt-3 grid gap-4 text-xs leading-relaxed text-stone-700 md:grid-cols-3">
+                <div className="rounded-xl bg-stone-50 p-4">
+                  <p className="font-bold text-stone-900">1. Weather & rain in your area</p>
+                  <p className="mt-1">
+                    We pull multi-year records from satellites and weather stations (NASA POWER and ERA5) to check how much it rains, when freezes happen, and when summer heat peaks.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-stone-50 p-4">
+                  <p className="font-bold text-stone-900">2. Soil, slope & green cover</p>
+                  <p className="mt-1">
+                    We check whether dirt leans sandy or clay, how much moisture it holds, how steep slopes wash out, and which months fields sit bare from space.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-stone-50 p-4">
+                  <p className="font-bold text-stone-900">3. Plain labels everywhere</p>
+                  <p className="mt-1">
+                    We clearly label what comes live from satellites versus regional estimates, so you always know what still needs checking out in the field.
+                  </p>
+                </div>
               </div>
-              <div className="rounded-xl bg-stone-50 p-4">
-                <p className="font-bold text-stone-900">2. Tierra, pendiente y verdor</p>
-                <p className="mt-1">
-                  Revisamos si la tierra es arenosa o barrial, cuánta agua guarda, si tiene pendiente para deslave y en
-                  qué meses el terreno se ve pelón desde el satélite.
-                </p>
+            ) : (
+              <div className="mt-3 grid gap-4 text-xs leading-relaxed text-stone-700 md:grid-cols-3">
+                <div className="rounded-xl bg-stone-50 p-4">
+                  <p className="font-bold text-stone-900">1. Clima y lluvia de tu zona</p>
+                  <p className="mt-1">
+                    Consultamos registros reales de los últimos años de satélites y estaciones (NASA POWER y ERA5) para saber cuánto llueve, cuándo hace helada y cuánto calor quema las flores.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-stone-50 p-4">
+                  <p className="font-bold text-stone-900">2. Tierra, pendiente y verdor</p>
+                  <p className="mt-1">
+                    Revisamos si la tierra es arenosa o barrial, cuánta agua guarda, si tiene pendiente para deslave y en qué meses el terreno se ve pelón desde el satélite.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-stone-50 p-4">
+                  <p className="font-bold text-stone-900">3. Transparencia total</p>
+                  <p className="mt-1">
+                    Siempre te avisamos cuándo un dato viene directo de satélite o cuándo es solo un estimado regional que necesita revisarse pisando el terreno.
+                  </p>
+                </div>
               </div>
-              <div className="rounded-xl bg-stone-50 p-4">
-                <p className="font-bold text-stone-900">3. Transparencia total</p>
-                <p className="mt-1">
-                  Siempre te avisamos cuándo un dato viene directo de satélite o cuándo es solo un estimado regional
-                  que necesita revisarse pisando el terreno.
-                </p>
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Everyday Spanish Glossary */}
+          {/* Everyday Glossary */}
           <div className="rounded-2xl border border-[#C8B89E] bg-[#FAF6EE] p-5 shadow-card">
-            <h2 className="text-base font-bold text-stone-900">Palabras clave explicadas sencillo</h2>
+            <h2 className="text-base font-bold text-stone-900">
+              {isEn ? 'Everyday words explained plainly' : 'Palabras clave explicadas sencillo'}
+            </h2>
             <p className="text-xs text-stone-600">
-              Qué significa cada palabra que aparece cuando abres los detalles técnicos.
+              {isEn
+                ? 'What each farming or weather word means when you open detailed views.'
+                : 'Qué significa cada palabra que aparece cuando abres los detalles técnicos.'}
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {Object.entries(GLOSSARY).map(([key, g]) => (
+              {Object.entries(glossary).map(([key, g]) => (
                 <div key={key} className="rounded-xl border border-stone-200 bg-stone-50/60 p-3.5 text-xs">
                   <p className="font-bold text-stone-900">{g.term}</p>
                   <p className="mt-1 font-medium text-emerald-800">{g.short}</p>
@@ -412,20 +478,31 @@ export function StepCatalogAndSources({
 
           {/* Technical 34-Source Audit Table inside DetailsToggle */}
           <DetailsToggle
-            title={`Ver tabla técnica de las ${site.sources.length} bases de datos`}
-            subtitle="Solo para técnicos o curiosos: estado de conexión en vivo, resolución en metros y limitaciones de cada fuente."
+            title={
+              isEn
+                ? `See full technical table (${site.sources.length} data sources)`
+                : `Ver tabla técnica de las ${site.sources.length} bases de datos`
+            }
+            subtitle={
+              isEn
+                ? 'For agronomists or deeper checks: live connection status, map detail in meters, and known limits.'
+                : 'Solo para técnicos o curiosos: estado de conexión en vivo, resolución en metros y limitaciones de cada fuente.'
+            }
           >
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-xs text-stone-600">
-                  Estado exacto consultado para <strong>{site.location.name}</strong>.
+                  {isEn ? 'Exact check status for' : 'Estado exacto consultado para'}{' '}
+                  <strong>{site.location.name}</strong>.
                 </p>
                 <select
                   value={agencyFilter}
                   onChange={(e) => setAgencyFilter(e.target.value as SourceAgency | 'all')}
                   className="rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-xs font-semibold text-stone-800"
                 >
-                  <option value="all">Todas las agencias ({site.sources.length})</option>
+                  <option value="all">
+                    {isEn ? `All agencies (${site.sources.length})` : `Todas las agencias (${site.sources.length})`}
+                  </option>
                   {agencies.map((ag) => (
                     <option key={ag} value={ag}>
                       {ag}
@@ -438,17 +515,17 @@ export function StepCatalogAndSources({
                 <table className="w-full min-w-[720px] text-left text-xs">
                   <thead className="border-b border-stone-200 text-[11px] uppercase text-stone-500">
                     <tr>
-                      <th className="py-2 pr-3">Fuente / Agencia</th>
-                      <th className="py-2 pr-3">Estado</th>
-                      <th className="py-2 pr-3">Resolución</th>
-                      <th className="py-2 pr-3">Resultado</th>
-                      <th className="py-2">Limitación clave</th>
+                      <th className="py-2 pr-3">{isEn ? 'Source / Agency' : 'Fuente / Agencia'}</th>
+                      <th className="py-2 pr-3">{isEn ? 'Status' : 'Estado'}</th>
+                      <th className="py-2 pr-3">{isEn ? 'Detail size' : 'Resolución'}</th>
+                      <th className="py-2 pr-3">{isEn ? 'What was found' : 'Resultado'}</th>
+                      <th className="py-2">{isEn ? 'Key limit' : 'Limitación clave'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100">
                     {filteredReports.map((rep) => {
-                      const meta = SOURCES[rep.id];
-                      const badge = STATUS_BADGE[rep.status];
+                      const meta = getSourceMeta(rep.id, locale);
+                      const badge = CONNECTOR_STATUS_COPY[locale][rep.status];
                       return (
                         <tr key={rep.id} className="align-top hover:bg-stone-50/60">
                           <td className="py-3 pr-3">
@@ -459,7 +536,7 @@ export function StepCatalogAndSources({
                                 target="_blank"
                                 rel="noreferrer"
                                 className="text-stone-400 hover:text-emerald-700"
-                                title="Sitio oficial"
+                                title={isEn ? 'Official website' : 'Sitio oficial'}
                               >
                                 <ExternalLink className="h-3 w-3" />
                               </a>
@@ -481,7 +558,7 @@ export function StepCatalogAndSources({
                             <p className="font-sans text-[10px] text-stone-400">{meta.temporalResolution}</p>
                           </td>
                           <td className="py-3 pr-3 text-stone-700">
-                            <p className="font-medium text-stone-800">{rep.summary}</p>
+                            <p className="font-medium text-stone-800">{localizeSourceSummary(rep, locale)}</p>
                             {rep.detail && <p className="mt-0.5 text-[11px] text-rose-700">{rep.detail}</p>}
                           </td>
                           <td className="py-3 text-[11px] text-stone-500">{meta.limitations}</td>

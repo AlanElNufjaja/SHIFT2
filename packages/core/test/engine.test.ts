@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALL_SOURCE_IDS,
+  GLOSSARY,
+  PILOT_PARCELS,
   SOURCES,
   analyzeSite,
   buildSyntheticClimate,
@@ -9,6 +11,9 @@ import {
   defaultFarmerInputs,
   evaluateCrop,
   getCrop,
+  getGlossary,
+  getSourceMeta,
+  localizePilot,
   lookupRegionalAquifer,
 } from '../src';
 import type { SiteProfile } from '../src';
@@ -193,6 +198,35 @@ describe('Field Shift Core Engine', () => {
     for (const s of res.strategies) {
       expect(Number.isFinite(s.scores.total)).toBe(true);
       expect(s.scores.total).toBeGreaterThan(0);
+    }
+  });
+
+  it('defaults engine output to English and supports full Spanish localization', () => {
+    const site = makeTestSite(33.58, -101.85, 'Lubbock, TX', true);
+    const farmer = defaultFarmerInputs(site);
+
+    const enRes = analyzeSite(site, farmer);
+    const esRes = analyzeSite(site, farmer, undefined, undefined, 'es');
+
+    expect(enRes.strategies[0].title).not.toEqual(esRes.strategies[0].title);
+    expect(enRes.strategies.some((s) => s.title.includes('Keep your current crop'))).toBe(true);
+    expect(esRes.strategies.some((s) => s.title.includes('Seguir como siembras hoy'))).toBe(true);
+
+    const enGlossary = getGlossary('en');
+    for (const k of Object.keys(GLOSSARY)) {
+      expect(enGlossary[k]).toBeDefined();
+      expect(enGlossary[k].short.length).toBeGreaterThan(5);
+    }
+
+    for (const id of ALL_SOURCE_IDS) {
+      expect(getSourceMeta(id, 'en').description.length).toBeGreaterThan(5);
+      expect(getSourceMeta(id, 'es').description.length).toBeGreaterThan(5);
+    }
+
+    for (const p of PILOT_PARCELS) {
+      const pEn = localizePilot(p, 'en');
+      expect(pEn.name.length).toBeGreaterThan(3);
+      expect(pEn.summary.length).toBeGreaterThan(10);
     }
   });
 });

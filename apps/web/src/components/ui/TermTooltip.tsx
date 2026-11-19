@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { HelpCircle } from 'lucide-react';
-import { GLOSSARY } from '@fieldshift/core';
+import { GLOSSARY, getGlossary } from '@fieldshift/core';
+import { useLocale } from '../../i18n/LocaleContext';
 
 interface Props {
   termKey: keyof typeof GLOSSARY | string;
@@ -8,8 +9,10 @@ interface Props {
 }
 
 export function TermTooltip({ termKey, label }: Props) {
+  const { locale } = useLocale();
   const [open, setOpen] = useState(false);
-  const entry = GLOSSARY[termKey];
+  const glossary = getGlossary(locale);
+  const entry = glossary[termKey];
 
   if (!entry) {
     return <span>{label ?? termKey}</span>;
@@ -38,7 +41,10 @@ export function TermTooltip({ termKey, label }: Props) {
           <p className="mt-1 leading-relaxed text-stone-600">{entry.detail}</p>
           {entry.example && (
             <p className="mt-2 rounded-lg bg-stone-50 px-2.5 py-1.5 text-[11px] text-stone-600">
-              <span className="font-semibold text-stone-700">Ejemplo:</span> {entry.example}
+              <span className="font-semibold text-stone-700">
+                {locale === 'en' ? 'Example:' : 'Ejemplo:'}
+              </span>{' '}
+              {entry.example}
             </p>
           )}
         </div>

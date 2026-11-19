@@ -3,6 +3,7 @@ import type {
   CropEvaluation,
   DrainageClass,
   IrrigationSystem,
+  Locale,
   MonthlyClimate,
   MonthlyCropBalance,
   Scenario,
@@ -196,7 +197,11 @@ const DRAINAGE_INDEX: Record<DrainageClass, number> = {
   poor: 4,
 };
 
-export function soilSuitability(crop: Crop, soil: SoilProfile): { score: number; limiting: string[] } {
+export function soilSuitability(
+  crop: Crop,
+  soil: SoilProfile,
+  locale: Locale = 'en',
+): { score: number; limiting: string[] } {
   let score = 1.0;
   const limiting: string[] = [];
 
@@ -205,11 +210,23 @@ export function soilSuitability(crop: Crop, soil: SoilProfile): { score: number;
     if (soil.ph < pMin) {
       const diff = pMin - soil.ph;
       score *= clamp(1 - diff * 0.25, 0.45, 1);
-      if (diff > 0.3) limiting.push(`Suelo ácido (pH ${soil.ph.toFixed(1)} < óptimo ${pMin})`);
+      if (diff > 0.3) {
+        limiting.push(
+          locale === 'en'
+            ? `Acidic soil (pH ${soil.ph.toFixed(1)} vs best ≥ ${pMin})`
+            : `Suelo ácido (pH ${soil.ph.toFixed(1)} < óptimo ${pMin})`,
+        );
+      }
     } else if (soil.ph > pMax) {
       const diff = soil.ph - pMax;
       score *= clamp(1 - diff * 0.22, 0.5, 1);
-      if (diff > 0.3) limiting.push(`Suelo alcalino (pH ${soil.ph.toFixed(1)} > óptimo ${pMax})`);
+      if (diff > 0.3) {
+        limiting.push(
+          locale === 'en'
+            ? `Alkaline soil (pH ${soil.ph.toFixed(1)} vs best ≤ ${pMax})`
+            : `Suelo alcalino (pH ${soil.ph.toFixed(1)} > óptimo ${pMax})`,
+        );
+      }
     }
   }
 
@@ -217,19 +234,31 @@ export function soilSuitability(crop: Crop, soil: SoilProfile): { score: number;
     const excess = soil.ecDsM - crop.soil.salinityThreshold;
     const pen = clamp(1 - excess * 0.14, 0.35, 1);
     score *= pen;
-    limiting.push(`Salinidad (EC ${soil.ecDsM.toFixed(1)} dS/m > umbral ${crop.soil.salinityThreshold})`);
+    limiting.push(
+      locale === 'en'
+        ? `High soil salt (${soil.ecDsM.toFixed(1)} dS/m vs limit ${crop.soil.salinityThreshold})`
+        : `Salinidad (EC ${soil.ecDsM.toFixed(1)} dS/m > umbral ${crop.soil.salinityThreshold})`,
+    );
   }
 
   const dIdx = DRAINAGE_INDEX[soil.drainage];
   if (dIdx >= 3 && crop.soil.waterlogSensitivity > 0.55) {
     const pen = dIdx === 4 ? 1 - 0.5 * crop.soil.waterlogSensitivity : 1 - 0.25 * crop.soil.waterlogSensitivity;
     score *= clamp(pen, 0.4, 1);
-    limiting.push('Drenaje deficiente / riesgo de encharcamiento');
+    limiting.push(
+      locale === 'en'
+        ? 'Poor drainage / standing water risk'
+        : 'Drenaje deficiente / riesgo de encharcamiento',
+    );
   }
 
   if (soil.awcMmPerM < 85 && crop.water.droughtSensitivity > 0.65 && crop.role === 'main') {
     score *= 0.88;
-    limiting.push('Suelo arenoso con baja retención de humedad');
+    limiting.push(
+      locale === 'en'
+        ? 'Sandy ground dries out quickly'
+        : 'Suelo arenoso con baja retención de humedad',
+    );
   }
 
   return { score: +clamp(score, 0.25, 1).toFixed(3), limiting };
@@ -319,6 +348,7 @@ export function evaluateCrop(
   waterCostUsdPer1000m3 = 25,
   startMonthOverride?: number,
   maxMonthsOverride?: number,
+  locale: Locale = 'en',
 ): CropEvaluation {
   const startMonth = startMonthOverride ?? findBestPlantingMonth(crop, monthly);
   const maxM = maxMonthsOverride ?? crop.thermal.maxMonths;
@@ -474,7 +504,7 @@ export function evaluateCrop(
     chillFactor = clamp(chill / crop.thermal.chillHours, 0.25, 1);
   }
 
-  const soilRes = soilSuitability(crop, soil);
+  const soilRes = soilSuitability(crop, soil, locale);
   const soilFactor = soilRes.score;
 
   // Overall suitability 0-100
@@ -491,16 +521,40 @@ export function evaluateCrop(
 
   const suitability = Math.round(clamp(combined * 100, 0, 100));
 
-  // Limiting factor explanations in plain Spanish
+  // Limiting factor explanations in plain language
   const limitingFactors: string[] = [...soilRes.limiting];
-  if (winterKill) limitingFactors.push('Temperatura mínima letal en invierno');
-  if (frostFactor < 0.8) limitingFactors.push('Riesgo de heladas durante el ciclo activo');
-  if (heatFactor < 0.82) limitingFactors.push('Estrés por calor extremo en floración / llenado');
-  if (seasonFactor < 0.85) limitingFactors.push('Estación térmica corta (grados-día insuficientes)');
-  if (chillFactor < 0.8) limitingFactors.push('Horas frío invernales insuficientes');
+  if (winterKill) {
+    limitingFactors.push(
+      locale === 'en' ? 'Winter cold can kill this crop' : 'Temperatura mínima letal en invierno',
+    );
+  }
+  if (frostFactor < 0.8) {
+    limitingFactors.push(
+      locale === 'en' ? 'Frost risk during growing months' : 'Riesgo de heladas durante el ciclo activo',
+    );
+  }
+  if (heatFactor < 0.82) {
+    limitingFactors.push(
+      locale === 'en' ? 'Extreme heat risk during bloom or grain fill' : 'Estrés por calor extremo en floración / llenado',
+    );
+  }
+  if (seasonFactor < 0.85) {
+    limitingFactors.push(
+      locale === 'en' ? 'Growing season may be too short' : 'Estación térmica corta (grados-día insuficientes)',
+    );
+  }
+  if (chillFactor < 0.8) {
+    limitingFactors.push(
+      locale === 'en' ? 'Not enough winter chill hours' : 'Horas frío invernales insuficientes',
+    );
+  }
   if (waterFactor < 0.78) {
     limitingFactors.push(
-      system === 'none'
+      locale === 'en'
+        ? system === 'none'
+          ? `Not enough rain (${deficitMm} mm short)`
+          : `Not enough irrigation water (${deficitMm} mm short)`
+        : system === 'none'
         ? `Déficit hídrico en temporal (${deficitMm} mm faltantes)`
         : `Agua de riego insuficiente (${deficitMm} mm de déficit)`,
     );

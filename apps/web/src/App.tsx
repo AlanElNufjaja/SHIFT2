@@ -18,10 +18,12 @@ import type { CandidateLocation } from './components/StepLocation';
 import { StepPriorities } from './components/StepPriorities';
 import { StepStrategies } from './components/StepStrategies';
 import { LoadingPipeline } from './components/ui/LoadingPipeline';
+import { useLocale } from './i18n/LocaleContext';
 import { fetchCatalog, streamSiteProfile } from './lib/api';
 import type { StreamProgressEvent } from './lib/api';
 
 export function App() {
+  const { locale } = useLocale();
   const [step, setStep] = useState<StepId>(1);
   const [candidate, setCandidate] = useState<CandidateLocation | null>(null);
   const [site, setSite] = useState<SiteProfile | null>(null);
@@ -59,8 +61,8 @@ export function App() {
 
   const analysis = useMemo(() => {
     if (!site || !farmer) return null;
-    return analyzeSite(site, farmer, scenario, effectiveCatalog);
-  }, [site, farmer, scenario, effectiveCatalog]);
+    return analyzeSite(site, farmer, scenario, effectiveCatalog, locale);
+  }, [site, farmer, scenario, effectiveCatalog, locale]);
 
   const confirmParcel = async (loc: CandidateLocation, refresh = false) => {
     setCandidate(loc);
@@ -84,7 +86,13 @@ export function App() {
       setFarmer(baseFarmer);
       setScenario(NEUTRAL_SCENARIO);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : 'No se pudieron cargar los datos de la parcela.');
+      setLoadError(
+        err instanceof Error
+          ? err.message
+          : locale === 'en'
+          ? 'Could not load field data.'
+          : 'No se pudieron cargar los datos de la parcela.',
+      );
       setStep(1);
     } finally {
       setLoading(false);

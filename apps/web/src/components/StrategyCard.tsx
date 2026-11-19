@@ -8,8 +8,9 @@ import {
   ShieldAlert,
   TrendingUp,
 } from 'lucide-react';
-import { getCrop } from '@fieldshift/core';
+import { getCrop, getCropName } from '@fieldshift/core';
 import type { Crop, Strategy } from '@fieldshift/core';
+import { useLocale } from '../i18n/LocaleContext';
 import { DetailsToggle } from './ui/DetailsToggle';
 import { ProvenanceBadge } from './ui/ProvenanceBadge';
 
@@ -19,24 +20,36 @@ interface Props {
 }
 
 export function StrategyCard({ strategy, catalog }: Props) {
+  const { locale } = useLocale();
+  const isEn = locale === 'en';
   const { metrics: m, scores: sc, explanation: ex } = strategy;
   const isTop = strategy.rank === 1;
 
   const headlineTitle = strategy.isCurrent
-    ? 'Seguir como siembras hoy'
+    ? isEn
+      ? 'Keep growing what you have today'
+      : 'Seguir como siembras hoy'
     : strategy.title.replace(/^Estrategia \d+\s*·\s*/i, '');
 
-  const waterText =
-    m.irrigationMm === 0
-      ? 'Solo con lluvia'
+  const waterText = isEn
+    ? m.irrigationMm === 0
+      ? 'Rain only (no irrigation)'
       : m.waterDeficitMm > 0
-      ? `Pide ${m.irrigationMm} mm (le faltarían ${m.waterDeficitMm} mm)`
-      : `Pide ${m.irrigationMm} mm al año`;
+      ? `Needs ${m.irrigationMm} mm (short ${m.waterDeficitMm} mm)`
+      : `Needs ${m.irrigationMm} mm/yr`
+    : m.irrigationMm === 0
+    ? 'Solo con lluvia'
+    : m.waterDeficitMm > 0
+    ? `Pide ${m.irrigationMm} mm (le faltarían ${m.waterDeficitMm} mm)`
+    : `Pide ${m.irrigationMm} mm al año`;
 
-  const soilText =
-    m.nFixedKgHa > 20
-      ? `${m.groundCoverPct} % protegida · da +${m.nFixedKgHa} kg de abono natural`
-      : `${m.groundCoverPct} % protegida (${m.bareMonths} meses pelona al año)`;
+  const soilText = isEn
+    ? m.nFixedKgHa > 20
+      ? `${m.groundCoverPct}% covered · adds +${m.nFixedKgHa} kg free N`
+      : `${m.groundCoverPct}% covered (${m.bareMonths} bare mo/yr)`
+    : m.nFixedKgHa > 20
+    ? `${m.groundCoverPct} % protegida · da +${m.nFixedKgHa} kg de abono natural`
+    : `${m.groundCoverPct} % protegida (${m.bareMonths} meses pelona al año)`;
 
   return (
     <article
@@ -62,11 +75,17 @@ export function StrategyCard({ strategy, catalog }: Props) {
               }`}
             >
               {isTop && <Award className="h-3.5 w-3.5 text-[#D99B26]" />}
-              {isTop ? 'Opción #1 recomendada para ti' : `Opción #${strategy.rank}`}
+              {isTop
+                ? isEn
+                  ? '#1 Recommended option'
+                  : 'Opción #1 recomendada para ti'
+                : isEn
+                ? `Option #${strategy.rank}`
+                : `Opción #${strategy.rank}`}
             </span>
             {strategy.isCurrent && (
               <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
-                Así estás sembrando hoy
+                {isEn ? 'What you grow today' : 'Así estás sembrando hoy'}
               </span>
             )}
           </div>
@@ -86,18 +105,20 @@ export function StrategyCard({ strategy, catalog }: Props) {
                   className="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-1 text-xs font-semibold text-stone-800"
                 >
                   <span>{c.icon}</span>
-                  <span>Año {idx + 1}: {c.name}</span>
+                  <span>
+                    {isEn ? `Year ${idx + 1}` : `Año ${idx + 1}`}: {getCropName(c, locale)}
+                  </span>
                 </span>
               );
             })}
             {strategy.offSeasonPolicy === 'cover' && (
               <span className="rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-900">
-                + Planta que tapa la tierra en descanso
+                {isEn ? '+ Cover crop in off-season' : '+ Planta que tapa la tierra en descanso'}
               </span>
             )}
             {strategy.offSeasonPolicy === 'double-crop' && (
               <span className="rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-900">
-                + Segunda siembra corta en el año
+                {isEn ? '+ Second short crop in year' : '+ Segunda siembra corta en el año'}
               </span>
             )}
           </div>
@@ -106,7 +127,9 @@ export function StrategyCard({ strategy, catalog }: Props) {
         {/* Friendly Score */}
         <div className="flex shrink-0 items-center gap-3 self-start rounded-2xl border border-stone-200 bg-stone-50 px-4 py-2.5">
           <div className="text-right">
-            <p className="text-[11px] font-semibold text-stone-500">Qué tanto te conviene</p>
+            <p className="text-[11px] font-semibold text-stone-500">
+              {isEn ? 'How well it fits' : 'Qué tanto te conviene'}
+            </p>
             <p className="font-display text-2xl font-extrabold text-emerald-800">
               {sc.total}
               <span className="text-sm font-semibold text-stone-400"> / 100</span>
@@ -119,21 +142,21 @@ export function StrategyCard({ strategy, catalog }: Props) {
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl bg-sky-50/70 p-3 text-xs">
           <p className="flex items-center gap-1 font-bold text-sky-900">
-            <Droplets className="h-3.5 w-3.5" /> Agua que ocupa
+            <Droplets className="h-3.5 w-3.5" /> {isEn ? 'Water needed' : 'Agua que ocupa'}
           </p>
           <p className="mt-1 font-semibold text-stone-900">{waterText}</p>
         </div>
         <div className="rounded-xl bg-emerald-50/70 p-3 text-xs">
           <p className="flex items-center gap-1 font-bold text-emerald-900">
-            <TrendingUp className="h-3.5 w-3.5" /> Lo que deja aprox. por ha
+            <TrendingUp className="h-3.5 w-3.5" /> {isEn ? 'Est. profit per ha' : 'Lo que deja aprox. por ha'}
           </p>
           <p className="mt-1 font-semibold text-stone-900">
-            ${m.netIncomePerHa.toLocaleString('en-US')} USD al año
+            ${m.netIncomePerHa.toLocaleString('en-US')} {isEn ? 'USD/yr' : 'USD al año'}
           </p>
         </div>
         <div className="rounded-xl bg-amber-50/70 p-3 text-xs">
           <p className="flex items-center gap-1 font-bold text-amber-900">
-            <Leaf className="h-3.5 w-3.5" /> Cómo cuida la tierra
+            <Leaf className="h-3.5 w-3.5" /> {isEn ? 'How it treats soil' : 'Cómo cuida la tierra'}
           </p>
           <p className="mt-1 font-semibold text-stone-900">{soilText}</p>
         </div>
@@ -144,7 +167,7 @@ export function StrategyCard({ strategy, catalog }: Props) {
         <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/40 p-3.5">
           <p className="flex items-center gap-1.5 text-xs font-extrabold text-emerald-950">
             <CheckCircle2 className="h-4 w-4 text-emerald-700" />
-            Por qué te conviene esta opción
+            {isEn ? 'Why this option fits your farm' : 'Por qué te conviene esta opción'}
           </p>
           <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-stone-800">
             {ex.why.map((line, i) => (
@@ -156,7 +179,7 @@ export function StrategyCard({ strategy, catalog }: Props) {
         <div className="rounded-xl border border-rose-200/80 bg-rose-50/40 p-3.5">
           <p className="flex items-center gap-1.5 text-xs font-extrabold text-rose-950">
             <ShieldAlert className="h-4 w-4 text-rose-700" />
-            Qué revisar antes de sembrar
+            {isEn ? 'What to check before planting' : 'Qué revisar antes de sembrar'}
           </p>
           <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-stone-800">
             {ex.risks.slice(0, 3).map((r, i) => (
@@ -169,15 +192,19 @@ export function StrategyCard({ strategy, catalog }: Props) {
       {/* Progressive Disclosure for Full Technical Numbers, Benefits Delta, Evidence & Gaps */}
       <div className="mt-4">
         <DetailsToggle
-          title="Ver números, pruebas y detalles completos"
-          subtitle="Comparación exacta contra lo que siembras hoy, datos del clima/tierra que la respaldan y qué falta revisar."
-          badge={`Seguridad de los datos: ${sc.reliability} %`}
+          title={isEn ? 'See full numbers, evidence & gaps' : 'Ver números, pruebas y detalles completos'}
+          subtitle={
+            isEn
+              ? 'Side-by-side comparison vs. today, weather/soil backup facts, and what satellites cannot see.'
+              : 'Comparación exacta contra lo que siembras hoy, datos del clima/tierra que la respaldan y qué falta revisar.'
+          }
+          badge={isEn ? `Data confidence: ${sc.reliability}%` : `Seguridad de los datos: ${sc.reliability} %`}
         >
           <div className="grid gap-4 md:grid-cols-2">
             {/* Evidence */}
             <div className="rounded-xl border border-stone-200 bg-stone-50/60 p-4">
               <h4 className="text-xs font-extrabold uppercase tracking-wide text-sky-900">
-                Datos reales que respaldan esta opción
+                {isEn ? 'Local facts backing this plan' : 'Datos reales que respaldan esta opción'}
               </h4>
               <div className="mt-2 space-y-2 text-xs">
                 {ex.evidence.map((ev, i) => (
@@ -196,7 +223,9 @@ export function StrategyCard({ strategy, catalog }: Props) {
             <div className="space-y-3">
               <div className="rounded-xl border border-stone-200 bg-stone-50/60 p-4">
                 <h4 className="text-xs font-extrabold uppercase tracking-wide text-emerald-900">
-                  Números estimados {strategy.isCurrent ? '' : '(comparado con hoy)'}
+                  {isEn
+                    ? `Estimated figures ${strategy.isCurrent ? '' : '(compared to today)'}`
+                    : `Números estimados ${strategy.isCurrent ? '' : '(comparado con hoy)'}`}
                 </h4>
                 <div className="mt-2 divide-y divide-stone-200/70 text-xs">
                   {ex.benefits.map((b, i) => (
@@ -222,7 +251,7 @@ export function StrategyCard({ strategy, catalog }: Props) {
               <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
                 <h4 className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide text-amber-950">
                   <HelpCircle className="h-4 w-4 text-amber-700" />
-                  Qué datos no sabemos desde lejos
+                  {isEn ? 'What satellites cannot see from above' : 'Qué datos no sabemos desde lejos'}
                 </h4>
                 <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-amber-950/90">
                   {ex.gaps.map((g, i) => (
@@ -234,7 +263,7 @@ export function StrategyCard({ strategy, catalog }: Props) {
               {ex.risks.length > 3 && (
                 <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4">
                   <h4 className="text-xs font-extrabold uppercase tracking-wide text-rose-950">
-                    Otros cuidados en campo
+                    {isEn ? 'Extra field checks' : 'Otros cuidados en campo'}
                   </h4>
                   <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-rose-950/90">
                     {ex.risks.slice(3).map((r, i) => (
@@ -250,7 +279,9 @@ export function StrategyCard({ strategy, catalog }: Props) {
 
       <p className="mt-3 flex items-center gap-1.5 text-[11px] text-stone-500">
         <AlertCircle className="h-3.5 w-3.5 shrink-0 text-stone-400" />
-        Úsalo como guía para platicar con tu técnico o revisar precios en tu comprador local antes de decidir.
+        {isEn
+          ? 'Use this as a starting point to discuss with your local agronomist and check buyer prices before deciding.'
+          : 'Úsalo como guía para platicar con tu técnico o revisar precios en tu comprador local antes de decidir.'}
       </p>
     </article>
   );

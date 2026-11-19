@@ -1,3 +1,5 @@
+import type { Locale } from '@fieldshift/core';
+
 /**
  * Client-side parcel geometry utilities and cached OpenStreetMap Overpass loader
  * for detecting agricultural fields (farmland, orchard, vineyard) worldwide.
@@ -10,17 +12,30 @@ export interface DetectedParcel {
   landuse: ParcelLanduse;
   label: string;
   name?: string;
+  cropTag?: string;
   polygon: [number, number][]; // [lat, lon][]
   center: [number, number]; // [lat, lon]
   areaHa: number;
 }
 
-const LANDUSE_LABELS: Record<ParcelLanduse, string> = {
-  farmland: 'Parcela agrícola',
-  orchard: 'Huerta / frutales',
-  vineyard: 'Viñedo',
-  drawn: 'Parcela marcada por ti',
+const LANDUSE_LABELS_I18N: Record<Locale, Record<ParcelLanduse, string>> = {
+  en: {
+    farmland: 'Farm field',
+    orchard: 'Orchard / fruit trees',
+    vineyard: 'Vineyard',
+    drawn: 'Your drawn field',
+  },
+  es: {
+    farmland: 'Parcela agrícola',
+    orchard: 'Huerta / frutales',
+    vineyard: 'Viñedo',
+    drawn: 'Parcela marcada por ti',
+  },
 };
+
+export function getLanduseLabel(landuse: ParcelLanduse, locale: Locale = 'en'): string {
+  return LANDUSE_LABELS_I18N[locale][landuse];
+}
 
 /**
  * Shoelace polygon area on a local tangent-plane projection (hectares).
@@ -130,8 +145,9 @@ export async function fetchOsmParcels(
     parcels.push({
       id: `osm-${el.id}`,
       landuse,
-      label: LANDUSE_LABELS[landuse],
-      name: el.tags?.name ?? (el.tags?.crop ? `Cultivo: ${el.tags.crop}` : undefined),
+      label: LANDUSE_LABELS_I18N.en[landuse],
+      name: el.tags?.name,
+      cropTag: el.tags?.crop,
       polygon: ring,
       center,
       areaHa,

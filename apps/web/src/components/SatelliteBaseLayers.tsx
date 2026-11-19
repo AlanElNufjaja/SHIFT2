@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ImageOverlay, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import type { LatLngBoundsExpression } from 'leaflet';
+import { useLocale } from '../i18n/LocaleContext';
 
 export type BasemapMode = 'sat' | 'topo' | 'light';
 
@@ -74,7 +75,7 @@ function UsdaCropOverlay() {
  * Street basemap without API key: uses Esri World Street Map by default,
  * falling back automatically to OpenStreetMap standard tiles if >= 3 tiles fail.
  */
-function StreetBasemapLayer() {
+function StreetBasemapLayer({ locale }: { locale: 'en' | 'es' }) {
   const [useOsmFallback, setUseOsmFallback] = useState(false);
   const errorCountRef = useRef(0);
 
@@ -92,7 +93,7 @@ function StreetBasemapLayer() {
   return (
     <TileLayer
       key="esri-street"
-      attribution="Calles &copy; Esri"
+      attribution={locale === 'en' ? 'Streets &copy; Esri' : 'Calles &copy; Esri'}
       url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
       maxZoom={19}
       eventHandlers={{
@@ -114,7 +115,7 @@ function StreetBasemapLayer() {
  * Reusable map base + relief + reference layers without paid API keys:
  * - Esri World Imagery + Esri World Hillshade (multiply blend for topographic volume)
  * - Esri World Boundaries & Places + World Transportation
- * - Esri World Street Map (with OpenStreetMap fallback) for "Calles"
+ * - Esri World Street Map (with OpenStreetMap fallback) for Streets
  * - Optional USDA CropScape CDL overlay (United States)
  */
 export function SatelliteBaseLayers({
@@ -123,17 +124,18 @@ export function SatelliteBaseLayers({
   showUsdaCdl,
   inCONUS = true,
 }: Props) {
+  const { locale } = useLocale();
   return (
     <>
       {basemap === 'sat' && (
         <>
           <TileLayer
-            attribution="Imagen &copy; Esri"
+            attribution={locale === 'en' ? 'Imagery &copy; Esri' : 'Imagen &copy; Esri'}
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
             maxZoom={19}
           />
           <TileLayer
-            attribution="Relieve &copy; Esri"
+            attribution={locale === 'en' ? 'Hillshade &copy; Esri' : 'Relieve &copy; Esri'}
             url="https://services.arcgisonline.com/arcgis/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}"
             opacity={0.28}
             maxNativeZoom={13}
@@ -167,7 +169,7 @@ export function SatelliteBaseLayers({
         />
       )}
 
-      {basemap === 'light' && <StreetBasemapLayer />}
+      {basemap === 'light' && <StreetBasemapLayer locale={locale} />}
 
       {showUsdaCdl && inCONUS && <UsdaCropOverlay />}
     </>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useLocale } from '../../i18n/LocaleContext';
 
 interface Props {
   title: string;
@@ -11,7 +12,10 @@ interface Props {
 }
 
 export function DetailsToggle({ title, subtitle, badge, defaultOpen = false, children }: Props) {
+  const { locale } = useLocale();
   const [open, setOpen] = useState(defaultOpen);
+  const labelHide = locale === 'en' ? 'Hide' : 'Ocultar';
+  const labelShow = locale === 'en' ? 'Show details' : 'Ver detalles';
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[#C8B89E] bg-[#FAF6EE] shadow-card">
@@ -34,7 +38,7 @@ export function DetailsToggle({ title, subtitle, badge, defaultOpen = false, chi
         </div>
 
         <span className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-[#C8B89E] bg-[#F1E8D7] px-3 py-1.5 text-xs font-bold text-[#234E36]">
-          <span>{open ? 'Ocultar' : 'Ver detalles'}</span>
+          <span>{open ? labelHide : labelShow}</span>
           {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </span>
       </button>

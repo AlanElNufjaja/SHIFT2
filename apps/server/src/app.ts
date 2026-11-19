@@ -12,7 +12,7 @@ import {
   analyzeSite,
   applyMarketOverrides,
 } from '@fieldshift/core';
-import type { FarmerInputs, Scenario, SiteProfile } from '@fieldshift/core';
+import type { FarmerInputs, Locale, Scenario, SiteProfile } from '@fieldshift/core';
 import { searchPlaces } from './connectors/geocode';
 import { fetchNassMarketPrices } from './connectors/optionalKeys';
 import { buildSiteProfile } from './harmonize';
@@ -187,6 +187,7 @@ export function createApp() {
       farmer?: FarmerInputs;
       scenario?: Scenario;
       overrides?: Record<string, { price?: number; potentialYield?: number; costPerHa?: number }>;
+      locale?: Locale;
     } | null;
 
     if (!body?.site || !body?.farmer) {
@@ -196,7 +197,8 @@ export function createApp() {
 
     try {
       const catalog = body.overrides ? applyMarketOverrides(CROPS, body.overrides) : CROPS;
-      const result = analyzeSite(body.site, body.farmer, body.scenario ?? NEUTRAL_SCENARIO, catalog);
+      const locale: Locale = body.locale === 'es' ? 'es' : 'en';
+      const result = analyzeSite(body.site, body.farmer, body.scenario ?? NEUTRAL_SCENARIO, catalog, locale);
       res.json(result);
     } catch (err) {
       res.status(400).json({ error: err instanceof Error ? err.message : 'Error analizando parcela' });

@@ -1,5 +1,6 @@
 import { Download, Printer, Sprout } from 'lucide-react';
 import type { AnalysisResult, Crop, FarmerInputs, Scenario, SiteProfile } from '@fieldshift/core';
+import { useLocale } from '../i18n/LocaleContext';
 import { ScenarioSimulator } from './ScenarioSimulator';
 import { StrategyCard } from './StrategyCard';
 import { StrategyCharts } from './StrategyCharts';
@@ -24,6 +25,9 @@ export function StepStrategies({
   onScenarioChange,
   onOpenSources,
 }: Props) {
+  const { locale } = useLocale();
+  const isEn = locale === 'en';
+
   const downloadJson = () => {
     const payload = {
       generatedAt: analysis.generatedAt,
@@ -51,13 +55,23 @@ export function StepStrategies({
         <div>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[#234E36]/25 bg-[#E7EFE9] px-3 py-1 text-xs font-bold text-[#1B3B2B]">
             <Sprout className="h-3.5 w-3.5 text-[#234E36]" />
-            Paso 4 de 5 · Mejores opciones para tu parcela
+            {isEn ? 'Step 4 of 5 · Best options for your land' : 'Paso 4 de 5 · Mejores opciones para tu parcela'}
           </span>
           <h1 className="mt-2 font-display text-2xl font-extrabold text-[#2A2118]">
-            Qué conviene sembrar en {site.location.name}
+            {isEn ? `What fits best in ${site.location.name}` : `Qué conviene sembrar en ${site.location.name}`}
           </h1>
           <p className="mt-0.5 text-sm text-[#524333]">
-            Comparamos {analysis.strategies.length} caminos para tus <strong>{farmer.constraints.farmSizeHa} hectáreas</strong>, empezando por el que mejor se ajusta a lo que pediste.
+            {isEn ? (
+              <>
+                We compared {analysis.strategies.length} plans for your{' '}
+                <strong>{farmer.constraints.farmSizeHa} hectares</strong>, ranked from top match downward.
+              </>
+            ) : (
+              <>
+                Comparamos {analysis.strategies.length} caminos para tus{' '}
+                <strong>{farmer.constraints.farmSizeHa} hectáreas</strong>, empezando por el que mejor se ajusta a lo que pediste.
+              </>
+            )}
           </p>
         </div>
 
@@ -66,7 +80,7 @@ export function StepStrategies({
           onClick={onOpenSources}
           className="no-print rounded-xl border border-[#C8B89E] bg-white px-4 py-2.5 text-xs font-bold text-[#2A2118] hover:bg-[#F3EBDC]"
         >
-          Ajustar precios de venta o ver cultivos
+          {isEn ? 'Edit crop prices or view data sources' : 'Ajustar precios de venta o ver cultivos'}
         </button>
       </div>
 
@@ -74,10 +88,12 @@ export function StepStrategies({
       {best && (
         <div className="rounded-2xl border border-[#234E36]/30 bg-[#E7EFE9] p-4 text-sm text-[#1B3B2B] shadow-card">
           <p className="font-extrabold">
-            Lo más recomendable ahora: {best.sequenceLabel}
+            {isEn ? `Top pick right now: ${best.sequenceLabel}` : `Lo más recomendable ahora: ${best.sequenceLabel}`}
           </p>
           <p className="mt-1 text-xs text-[#234E36]">
-            Logra {best.scores.total} de 100 puntos según tus metas. Abajo puedes compararla contra seguir igual que hoy y probar qué pasa si el año viene más seco.
+            {isEn
+              ? `Scores ${best.scores.total} out of 100 based on your farm goals. Below you can compare it against staying as-is and test dry or hot seasons.`
+              : `Logra ${best.scores.total} de 100 puntos según tus metas. Abajo puedes compararla contra seguir igual que hoy y probar qué pasa si el año viene más seco.`}
           </p>
         </div>
       )}
@@ -107,16 +123,24 @@ export function StepStrategies({
 
       {/* Progressive Disclosure: Comparative Charts + Export */}
       <DetailsToggle
-        title="Ver gráficas comparativas y calendario de 3 años"
-        subtitle="Dibujos para comparar agua, ganancia y cómo queda cubierta la tierra mes a mes."
+        title={isEn ? 'See comparison charts & 3-year planting calendar' : 'Ver gráficas comparativas y calendario de 3 años'}
+        subtitle={
+          isEn
+            ? 'Visual charts comparing water use, estimated profit, and ground cover month by month.'
+            : 'Dibujos para comparar agua, ganancia y cómo queda cubierta la tierra mes a mes.'
+        }
       >
         <StrategyCharts strategies={analysis.strategies} catalog={catalog} />
       </DetailsToggle>
 
       <div className="no-print">
         <DetailsToggle
-          title="Imprimir hoja resumen o descargar archivo para técnico"
-          subtitle="Lleva esta comparación impresa o guarda los datos completos."
+          title={isEn ? 'Print summary sheet or download backup file' : 'Imprimir hoja resumen o descargar archivo para técnico'}
+          subtitle={
+            isEn
+              ? 'Take a paper printout to discuss with your advisor or save the full numbers.'
+              : 'Lleva esta comparación impresa o guarda los datos completos.'
+          }
         >
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -125,7 +149,7 @@ export function StepStrategies({
               className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-900"
             >
               <Printer className="h-4 w-4" />
-              Imprimir resumen
+              {isEn ? 'Print summary' : 'Imprimir resumen'}
             </button>
             <button
               type="button"
@@ -133,7 +157,7 @@ export function StepStrategies({
               className="inline-flex items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-xs font-semibold text-stone-700 hover:bg-stone-50"
             >
               <Download className="h-4 w-4" />
-              Descargar respaldo técnico (JSON)
+              {isEn ? 'Download advisor file (JSON)' : 'Descargar respaldo técnico (JSON)'}
             </button>
           </div>
         </DetailsToggle>

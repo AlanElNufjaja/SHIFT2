@@ -17,6 +17,8 @@
  * - user:       entered or edited by the farmer / advisor.
  * - unavailable: no data could be obtained; the engine uses a neutral assumption and flags it.
  */
+export type Locale = 'en' | 'es';
+
 export type Provenance = 'live' | 'cached' | 'derived' | 'baseline' | 'simulated' | 'user' | 'unavailable';
 
 export interface Sourced<T> {

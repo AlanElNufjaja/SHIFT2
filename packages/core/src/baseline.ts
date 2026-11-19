@@ -2,7 +2,8 @@
  * Transparent baseline / synthetic generators used strictly when live APIs
  * are unreachable or lack coverage. Every value carries provenance: 'baseline'.
  */
-import type { MonthlyClimate, SoilProfile, Sourced, TerrainProfile } from './types';
+import { AQUIFER_NOTES_EN } from './i18n';
+import type { Locale, MonthlyClimate, SoilProfile, Sourced, TerrainProfile } from './types';
 
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
@@ -184,7 +185,11 @@ const KNOWN_AQUIFER_ZONES: AquiferZone[] = [
   },
 ];
 
-export function lookupRegionalAquifer(lat: number, lon: number): Sourced<'strong-decline' | 'decline' | 'stable' | 'unknown'> {
+export function lookupRegionalAquifer(
+  lat: number,
+  lon: number,
+  locale: Locale = 'en',
+): Sourced<'strong-decline' | 'decline' | 'stable' | 'unknown'> {
   const match = KNOWN_AQUIFER_ZONES.find(
     (z) => lat >= z.latMin && lat <= z.latMax && lon >= z.lonMin && lon <= z.lonMax,
   );
@@ -195,17 +200,31 @@ export function lookupRegionalAquifer(lat: number, lon: number): Sourced<'strong
       sources: ['grace', 'fieldshift-baseline'],
       resolution: '~300 km (GRACE/GRACE-FO)',
       confidence: 0.3,
-      method: 'Referencia regional por cuenca hidrogeológica',
-      note: 'Sin tendencia gravimétrica pre-clasificada para esta cuenca; verifique niveles piezométricos locales.',
+      method:
+        locale === 'en'
+          ? 'Regional basin water overview'
+          : 'Referencia regional por cuenca hidrogeológica',
+      note:
+        locale === 'en'
+          ? 'No pre-mapped regional groundwater trend here; check local well water depths.'
+          : 'Sin tendencia gravimétrica pre-clasificada para esta cuenca; verifique niveles piezométricos locales.',
     };
   }
+  const enKey = Object.keys(AQUIFER_NOTES_EN).find((k) => match.name.includes(k));
+  const enInfo = enKey ? AQUIFER_NOTES_EN[enKey] : undefined;
   return {
     value: match.trend,
     provenance: 'baseline',
     sources: ['grace', 'fieldshift-baseline'],
     resolution: '~300 km (GRACE/GRACE-FO)',
     confidence: 0.65,
-    method: `Síntesis regional publicada GRACE/GRACE-FO: ${match.name}`,
-    note: `${match.note} Nota: la resolución de GRACE (~300 km) refleja la cuenca, no un pozo individual.`,
+    method:
+      locale === 'en'
+        ? `Regional GRACE groundwater overview: ${enInfo?.name ?? match.name}`
+        : `Síntesis regional publicada GRACE/GRACE-FO: ${match.name}`,
+    note:
+      locale === 'en'
+        ? `${enInfo?.note ?? match.note} Note: this covers a wide ~300 km basin, not a single well.`
+        : `${match.note} Nota: la resolución de GRACE (~300 km) refleja la cuenca, no un pozo individual.`,
   };
 }

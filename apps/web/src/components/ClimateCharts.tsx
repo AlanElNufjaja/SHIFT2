@@ -11,17 +11,21 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { MONTH_NAMES_ES } from '@fieldshift/core';
+import { MONTH_NAMES } from '@fieldshift/core';
 import type { SiteProfile } from '@fieldshift/core';
+import { useLocale } from '../i18n/LocaleContext';
 import { ProvenanceBadge } from './ui/ProvenanceBadge';
 
 type Tab = 'climate' | 'ndvi' | 'trends';
 
 export function ClimateCharts({ site }: { site: SiteProfile }) {
+  const { locale } = useLocale();
+  const isEn = locale === 'en';
   const [tab, setTab] = useState<Tab>('climate');
+  const monthNames = MONTH_NAMES[locale];
 
   const monthlyData = site.climate.monthly.map((m, idx) => ({
-    name: MONTH_NAMES_ES[idx],
+    name: monthNames[idx],
     precip: m.precip,
     et0: m.et0,
     tmax: m.tmax,
@@ -38,12 +42,23 @@ export function ClimateCharts({ site }: { site: SiteProfile }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-bold text-[#2A2118]">
-            Cómo cambian la lluvia, el calor y el verdor en el año
+            {isEn
+              ? 'How rainfall, heat & plant greenness change by month'
+              : 'Cómo cambian la lluvia, el calor y el verdor en el año'}
           </h3>
           <p className="text-xs text-[#524333]">
-            {tab === 'climate' && 'Barras azules: lo que llueve al mes · Área naranja: el agua que el sol y el aire secan'}
-            {tab === 'ndvi' && 'Verde: qué tan cubierta de plantas está la tierra · Azul: humedad arriba del suelo'}
-            {tab === 'trends' && 'Cómo ha subido o bajado la lluvia y el calor en los últimos 30 años'}
+            {tab === 'climate' &&
+              (isEn
+                ? 'Blue bars: monthly rain · Orange shade: water dried by sun & air'
+                : 'Barras azules: lo que llueve al mes · Área naranja: el agua que el sol y el aire secan')}
+            {tab === 'ndvi' &&
+              (isEn
+                ? 'Green: how covered soil stays with plants · Blue: topsoil wetness'
+                : 'Verde: qué tan cubierta de plantas está la tierra · Azul: humedad arriba del suelo')}
+            {tab === 'trends' &&
+              (isEn
+                ? 'How rainfall and average temperatures have shifted over the past 30 years'
+                : 'Cómo ha subido o bajado la lluvia y el calor en los últimos 30 años')}
           </p>
         </div>
 
@@ -55,7 +70,7 @@ export function ClimateCharts({ site }: { site: SiteProfile }) {
               tab === 'climate' ? 'bg-[#FAF6EE] text-[#1B3B2B] shadow-sm' : 'text-[#5B4935]'
             }`}
           >
-            Lluvia y calor por mes
+            {isEn ? 'Monthly rain & heat' : 'Lluvia y calor por mes'}
           </button>
           <button
             type="button"
@@ -64,7 +79,7 @@ export function ClimateCharts({ site }: { site: SiteProfile }) {
               tab === 'ndvi' ? 'bg-[#FAF6EE] text-[#1B3B2B] shadow-sm' : 'text-[#5B4935]'
             }`}
           >
-            Verdor y humedad
+            {isEn ? 'Greenness & moisture' : 'Verdor y humedad'}
           </button>
           <button
             type="button"
@@ -73,7 +88,7 @@ export function ClimateCharts({ site }: { site: SiteProfile }) {
               tab === 'trends' ? 'bg-[#FAF6EE] text-[#1B3B2B] shadow-sm' : 'text-[#5B4935]'
             }`}
           >
-            Últimos 30 años
+            {isEn ? 'Last 30 years' : 'Últimos 30 años'}
           </button>
         </div>
       </div>
@@ -87,23 +102,42 @@ export function ClimateCharts({ site }: { site: SiteProfile }) {
               <YAxis
                 yAxisId="mm"
                 tick={{ fontSize: 11, fill: '#0369a1' }}
-                label={{ value: 'Agua (mm)', angle: -90, position: 'insideLeft', offset: 18, style: { fontSize: 10, fill: '#0369a1' } }}
+                label={{
+                  value: isEn ? 'Water (mm)' : 'Agua (mm)',
+                  angle: -90,
+                  position: 'insideLeft',
+                  offset: 18,
+                  style: { fontSize: 10, fill: '#0369a1' },
+                }}
               />
               <YAxis
                 yAxisId="temp"
                 orientation="right"
                 tick={{ fontSize: 11, fill: '#b45309' }}
-                label={{ value: '°C', angle: 90, position: 'insideRight', offset: 14, style: { fontSize: 10, fill: '#b45309' } }}
+                label={{
+                  value: '°C',
+                  angle: 90,
+                  position: 'insideRight',
+                  offset: 14,
+                  style: { fontSize: 10, fill: '#b45309' },
+                }}
               />
               <Tooltip
                 contentStyle={{ borderRadius: 12, borderColor: '#e7e5e4', fontSize: 12 }}
                 formatter={(value: unknown, name: string) => {
-                  const labels: Record<string, string> = {
-                    precip: 'Lluvia del mes (mm)',
-                    et0: 'Agua que seca el aire (mm)',
-                    tmax: 'Calor máximo de día (°C)',
-                    tmin: 'Frío mínimo de noche (°C)',
-                  };
+                  const labels: Record<string, string> = isEn
+                    ? {
+                        precip: 'Monthly rain (mm)',
+                        et0: 'Water pulled by air (mm)',
+                        tmax: 'Daytime high (°C)',
+                        tmin: 'Nighttime low (°C)',
+                      }
+                    : {
+                        precip: 'Lluvia del mes (mm)',
+                        et0: 'Agua que seca el aire (mm)',
+                        tmax: 'Calor máximo de día (°C)',
+                        tmin: 'Frío mínimo de noche (°C)',
+                      };
                   return [String(value), labels[name] ?? name];
                 }}
               />
@@ -123,8 +157,8 @@ export function ClimateCharts({ site }: { site: SiteProfile }) {
           </ResponsiveContainer>
         )}
 
-        {tab === 'ndvi' && (
-          hasNdvi ? (
+        {tab === 'ndvi' &&
+          (hasNdvi ? (
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={monthlyData} margin={{ top: 10, right: 12, left: -12, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
@@ -134,8 +168,12 @@ export function ClimateCharts({ site }: { site: SiteProfile }) {
                 <Tooltip
                   contentStyle={{ borderRadius: 12, borderColor: '#e7e5e4', fontSize: 12 }}
                   formatter={(value: unknown, name: string) => {
-                    if (name === 'ndvi') return [String(value), 'Verdor de plantas (0 a 1)'];
-                    if (name === 'soilWetPct') return [`${value} %`, 'Humedad superficial (%)'];
+                    if (name === 'ndvi') {
+                      return [String(value), isEn ? 'Plant cover greenness (0 to 1)' : 'Verdor de plantas (0 a 1)'];
+                    }
+                    if (name === 'soilWetPct') {
+                      return [`${value}%`, isEn ? 'Topsoil moisture (%)' : 'Humedad superficial (%)'];
+                    }
                     return [String(value), name];
                   }}
                 />
@@ -144,7 +182,12 @@ export function ClimateCharts({ site }: { site: SiteProfile }) {
                   y={0.25}
                   stroke="#d97706"
                   strokeDasharray="4 4"
-                  label={{ value: 'Debajo de aquí = tierra pelona', position: 'insideTopLeft', fill: '#b45309', fontSize: 10 }}
+                  label={{
+                    value: isEn ? 'Below here = bare ground' : 'Debajo de aquí = tierra pelona',
+                    position: 'insideTopLeft',
+                    fill: '#b45309',
+                    fontSize: 10,
+                  }}
                 />
                 <Area
                   yAxisId="ndvi"
@@ -167,13 +210,14 @@ export function ClimateCharts({ site }: { site: SiteProfile }) {
             </ResponsiveContainer>
           ) : (
             <div className="flex h-full items-center justify-center rounded-xl bg-stone-50 px-4 text-center text-xs text-stone-600">
-              No tuvimos suficientes fotos satelitales de verdor para este punto; usamos el calendario de tu cultivo.
+              {isEn
+                ? 'Not enough cloud-free satellite greenness shots for this point; using your crop calendar instead.'
+                : 'No tuvimos suficientes fotos satelitales de verdor para este punto; usamos el calendario de tu cultivo.'}
             </div>
-          )
-        )}
+          ))}
 
-        {tab === 'trends' && (
-          hasTrends ? (
+        {tab === 'trends' &&
+          (hasTrends ? (
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={site.climate.annualSeries} margin={{ top: 10, right: 12, left: -12, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
@@ -183,8 +227,16 @@ export function ClimateCharts({ site }: { site: SiteProfile }) {
                 <Tooltip
                   contentStyle={{ borderRadius: 12, borderColor: '#e7e5e4', fontSize: 12 }}
                   formatter={(value: unknown, name: string) => [
-                    name === 'precip' ? `${value} mm/año` : `${value} °C`,
-                    name === 'precip' ? 'Lluvia de todo el año' : 'Temperatura promedio',
+                    name === 'precip'
+                      ? `${value} ${isEn ? 'mm/yr' : 'mm/año'}`
+                      : `${value} °C`,
+                    name === 'precip'
+                      ? isEn
+                        ? 'Yearly rainfall'
+                        : 'Lluvia de todo el año'
+                      : isEn
+                      ? 'Average temp'
+                      : 'Temperatura promedio',
                   ]}
                 />
                 <Bar yAxisId="p" dataKey="precip" fill="#38bdf8" radius={[3, 3, 0, 0]} />
@@ -193,10 +245,11 @@ export function ClimateCharts({ site }: { site: SiteProfile }) {
             </ResponsiveContainer>
           ) : (
             <div className="flex h-full items-center justify-center rounded-xl bg-stone-50 px-4 text-center text-xs text-stone-600">
-              No hay historial largo disponible en modo de respaldo.
+              {isEn
+                ? 'No multi-decade history available while running in offline backup mode.'
+                : 'No hay historial largo disponible en modo de respaldo.'}
             </div>
-          )
-        )}
+          ))}
       </div>
 
       {/* Provenance & Simple Trend Footer */}
@@ -209,19 +262,19 @@ export function ClimateCharts({ site }: { site: SiteProfile }) {
           />
           {site.climate.tempTrendCPerDecade && (
             <span>
-              Cambio de calor:{' '}
+              {isEn ? 'Warming trend:' : 'Cambio de calor:'}{' '}
               <strong className="text-stone-900">
                 {site.climate.tempTrendCPerDecade.value > 0 ? '+' : ''}
-                {site.climate.tempTrendCPerDecade.value} °C cada 10 años
+                {site.climate.tempTrendCPerDecade.value} °C {isEn ? 'per 10 yrs' : 'cada 10 años'}
               </strong>
             </span>
           )}
           {site.climate.recentPrecipAnomalyPct && (
             <span>
-              · Último año llovió:{' '}
+              · {isEn ? "Last year's rain:" : 'Último año llovió:'}{' '}
               <strong className="text-stone-900">
                 {site.climate.recentPrecipAnomalyPct.value > 0 ? '+' : ''}
-                {site.climate.recentPrecipAnomalyPct.value} % vs. lo normal
+                {site.climate.recentPrecipAnomalyPct.value}% {isEn ? 'vs. normal' : 'vs. lo normal'}
               </strong>
             </span>
           )}
